@@ -1,0 +1,11 @@
+{
+  // Cloudflare Workers, serving `web/` as static assets. There is no Worker script:
+  // the game talks to Supabase straight from the browser, so nothing runs on the edge.
+  "name": "skull",
+  "compatibility_date": "2026-09-15",
+  "assets": {
+    "directory": "./web",
+    // no client-side routing here — an unknown path should 404, not serve the game
+    "not_found_handling": "404-page"
+  }
+}

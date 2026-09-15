@@ -85,9 +85,14 @@ RPC in its own transaction, so the lock covers the whole move.
 `web/` is a folder of static files with no build step, so any static host works. The only
 setting that matters anywhere is **publish the `web` directory, with no build command**.
 
-**Cloudflare Pages** — Workers & Pages → Create → Pages → connect to Git → pick this repo.
-Framework preset *None*, build command empty, **build output directory `web`**. Every push to
-`main` redeploys.
+**Cloudflare** — the dashboard now routes Git connections through Workers rather than Pages,
+so `wrangler.jsonc` in the repo root does the work: it serves `web/` as static assets with no
+Worker script. Connect the repo, leave **Build command empty**, keep the **Deploy command** as
+`npx wrangler deploy`, and leave **Path** as `/`. No environment variables. The API token needs
+*Edit Cloudflare Workers*. Every push to `main` redeploys.
+
+If you would rather use Pages, its flow needs no wrangler file at all: build command empty,
+**build output directory `web`**.
 
 **Netlify** — Add new site → Import an existing project → pick the repo. Build command empty,
 **publish directory `web`**.
