@@ -1,0 +1,12 @@
+{
+  "name": "skull",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "node test/devserver.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.10"
+  }
+}

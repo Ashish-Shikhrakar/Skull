@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skull &amp; Roses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+  <g id="petal"><path d="M50 55 C29 51 19 32 32 18 C44 6 62 9 69 22 C75 34 66 50 50 55 Z"/></g>
+
+  <symbol id="i-rose" viewBox="0 0 100 100">
+    <g fill="#1F4030" stroke="#0E2418" stroke-width="2" stroke-linejoin="round">
+      <path d="M52 56 C66 64 82 58 89 44 C74 39 58 45 52 56 Z"/>
+      <path d="M48 56 C34 64 18 58 11 44 C26 39 42 45 48 56 Z"/>
+    </g>
+    <g stroke="#5E1017" stroke-width="2.4" stroke-linejoin="round">
+      <g fill="#A81E2B">
+        <use href="#petal" transform="rotate(16 50 50)"/><use href="#petal" transform="rotate(88 50 50)"/>
+        <use href="#petal" transform="rotate(160 50 50)"/><use href="#petal" transform="rotate(232 50 50)"/>
+        <use href="#petal" transform="rotate(304 50 50)"/>
+      </g>
+      <g fill="#C9303A" transform="translate(50 50) scale(.66) translate(-50 -50)" stroke-width="3.5">
+        <use href="#petal" transform="rotate(52 50 50)"/><use href="#petal" transform="rotate(124 50 50)"/>
+        <use href="#petal" transform="rotate(196 50 50)"/><use href="#petal" transform="rotate(268 50 50)"/>
+        <use href="#petal" transform="rotate(340 50 50)"/>
+      </g>
+      <g fill="#E04B4F" transform="translate(50 50) scale(.4) translate(-50 -50)" stroke-width="5.5">
+        <use href="#petal" transform="rotate(90 50 50)"/><use href="#petal" transform="rotate(210 50 50)"/>
+        <use href="#petal" transform="rotate(330 50 50)"/>
+      </g>
+    </g>
+    <path d="M58 47 C58 39 48 36 43 43 C38 50 44 59 53 57 C63 55 67 44 61 36" fill="none"
+          stroke="#5E1017" stroke-width="3.2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="i-skull" viewBox="0 0 100 100">
+    <path d="M50 13 C29 13 16 28 16 46 C16 56 20 64 26 69 C29 71 30 73 30 76 L30 80 C30 84 33 87 38 87 L62 87 C67 87 70 84 70 80 L70 76 C70 73 71 71 74 69 C80 64 84 56 84 46 C84 28 71 13 50 13 Z"
+          fill="#F2ECDC"/>
+    <g fill="#131218">
+      <path d="M35 33 C43 33 47 40 45 48 C43 55 36 58 30 54 C25 51 24 44 27 38 C29 35 32 33 35 33 Z"/>
+      <path d="M65 33 C57 33 53 40 55 48 C57 55 64 58 70 54 C75 51 76 44 73 38 C71 35 68 33 65 33 Z"/>
+      <path d="M50 55 C47 60 43 65 42 69 C45 71 55 71 58 69 C57 65 53 60 50 55 Z"/>
+      <rect x="30" y="74" width="40" height="2.4" rx="1.2"/>
+      <path d="M41 76 L41 87 M50 76 L50 87 M59 76 L59 87" stroke="#131218" stroke-width="2.4"/>
+    </g>
+    <g fill="none" stroke="#C6B58F" stroke-width="1.8" stroke-linecap="round" opacity=".7">
+      <path d="M24 42 C27 39 30 39 32 41"/><path d="M76 42 C73 39 70 39 68 41"/>
+    </g>
+  </symbol>
+
+  <symbol id="i-back" viewBox="0 0 100 100">
+    <g fill="none" stroke="currentColor" stroke-linecap="round">
+      <circle cx="50" cy="50" r="41" stroke-width="1.2" opacity=".45"/>
+      <circle cx="50" cy="50" r="36" stroke-width="2.2" opacity=".9"/>
+      <circle cx="50" cy="50" r="19" stroke-width="1.6" opacity=".7"/>
+      <g stroke-width="2.6" opacity=".85"><path d="M50 22 L50 31 M50 69 L50 78 M22 50 L31 50 M69 50 L78 50"/></g>
+      <g stroke-width="1.6" opacity=".5"><path d="M30 30 L36 36 M70 30 L64 36 M30 70 L36 64 M70 70 L64 64"/></g>
+      <circle cx="50" cy="50" r="26" stroke-width="1" stroke-dasharray="1.5 5.5" opacity=".6"/>
+    </g>
+    <circle cx="50" cy="50" r="6.5" fill="currentColor" opacity=".9"/>
+    <circle cx="50" cy="50" r="2.6" fill="#120B07"/>
+  </symbol>
+</defs></svg>
+
+<main id="app"></main>
+<p id="say" class="sr-only" role="status" aria-live="polite"></p>
+<div id="toast" role="status" aria-live="assertive"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
