@@ -80,6 +80,35 @@ disc face is ever sent to a browser that shouldn't have it.
 Concurrent moves are serialised by `SELECT … FOR UPDATE` on the game row; PostgREST runs each
 RPC in its own transaction, so the lock covers the whole move.
 
+## Putting it online
+
+`web/` is a folder of static files with no build step, so any static host works. The only
+setting that matters anywhere is **publish the `web` directory, with no build command**.
+
+**Cloudflare Pages** — Workers & Pages → Create → Pages → connect to Git → pick this repo.
+Framework preset *None*, build command empty, **build output directory `web`**. Every push to
+`main` redeploys.
+
+**Netlify** — Add new site → Import an existing project → pick the repo. Build command empty,
+**publish directory `web`**.
+
+**Vercel** — free on the Hobby plan for personal, non-commercial projects. Import the repo,
+framework preset *Other*, and set **Root Directory to `web`**. Vercel ignores `web/_headers`;
+if you want the same cache rules, add a `vercel.json` with a `headers` block.
+
+**GitHub Pages** — free and the repo is already there, but Pages serves from the repo root, a
+`/docs` folder, or a branch, not from `web/`. You would need a small Actions workflow to
+publish the folder. The other three are less work.
+
+There is no server to run and no environment variable to set: `web/config.js` already points
+at the Supabase project, and the anon key in it is meant to be public.
+
+Two things to know once it is live. Anyone with the URL can create tables in your Supabase
+project, which is the free tier's quota to spend — rotate the anon key in the dashboard if
+that becomes a problem. And when you change `app.js`, `copy.js` or `style.css`, bump the `?v=`
+number in `index.html` and in the `copy.js` import, or returning players keep the JS their
+browser already cached.
+
 ## Leaving
 
 A game of Skull cannot continue around a missing player — everyone has to lay a disc every

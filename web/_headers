@@ -1,0 +1,11 @@
+# Cloudflare Pages and Netlify both read this file.
+# index.html must stay fresh: it carries the ?v= stamps that point at the current
+# JS and CSS, so caching it would hide a deploy behind the previous version.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/config.js
+  Cache-Control: no-cache
+/*
+  Cache-Control: public, max-age=3600
