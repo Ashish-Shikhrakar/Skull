@@ -15,16 +15,19 @@ Space Cowboys), including the three that most implementations get wrong:
   next leader as their last act.
 - The first player places their opening disc **last**.
 
-## Play it right now, with no account
+## Play it right now
 
 ```bash
 npm install && npm run dev
 ```
 
 Open http://localhost:5179. This runs the real schema inside [PGlite](https://pglite.dev)
-(Postgres compiled to WASM) — same SQL, same rules, no Docker, no Supabase project. State
-lives in memory and disappears when you stop the server. Good for one machine; for playing
-with other people, set up Supabase below.
+(Postgres compiled to WASM) — same SQL, same rules, no Docker, no Supabase project needed.
+State lives in memory and disappears when you stop the server.
+
+`web/config.js` already points at a live Supabase project, so serving `web/` as static files
+plays online with other people right now. `SKULL_REAL_CONFIG=1 npm run dev` uses that live
+project instead of the in-memory one.
 
 ## Play it with other people
 
@@ -40,6 +43,13 @@ with other people, set up Supabase below.
    GitHub Pages, S3). There is no build step.
 
 Then one player starts a table and reads out the four-letter code.
+
+The anon key in `config.js` is public by design: it ships to every browser that loads the
+game, so committing it leaks nothing that deploying would not. Rotate it in the dashboard if
+you would rather not have strangers able to create tables in your project.
+
+Asset URLs carry a `?v=` stamp (`index.html`, and the `copy.js` import in `app.js`). Bump it
+when you deploy a change, or browsers will keep running the JS they already cached.
 
 ## How the hidden information stays hidden
 
@@ -70,6 +80,23 @@ disc face is ever sent to a browser that shouldn't have it.
 Concurrent moves are serialised by `SELECT … FOR UPDATE` on the game row; PostgREST runs each
 RPC in its own transaction, so the lock covers the whole move.
 
+## Leaving
+
+A game of Skull cannot continue around a missing player — everyone has to lay a disc every
+round, and the absent one might be the challenger or the high bidder. So:
+
+- **In the lobby**, leaving just frees the seat, and the seat number is reused by the next
+  person to join. If the host leaves, the deal passes to whoever is left.
+- **Mid-game**, leaving takes your discs out of the game and **voids the round**. Everyone
+  else takes their discs back and the next player clockwise leads. Dropping to one player
+  ends the game.
+- **Closing the tab really leaves.** The browser warns first; if you go anyway, a
+  `keepalive` fetch forfeits the seat on the way out, because supabase-js cannot send during
+  unload. Note that a refresh counts as closing — the warning is the only guard.
+
+Someone who left looks exactly like someone eliminated: dimmed seat, no discs, and their own
+screen says they can watch but are not holding anything.
+
 ## Tests
 
 ```bash
@@ -98,11 +125,21 @@ anything. Anything it catches is a real bug rather than a broken expectation.
 | `sql/schema.sql` | the whole backend: tables, RLS, rules engine, four RPCs |
 | `web/index.html` | markup and the rose/skull/disc-back artwork |
 | `web/app.js` | client: rendering, input, Realtime subscription |
+| `web/copy.js` | every line the game says, and the reveal-line pools |
 | `web/style.css` | the felt, the discs, the layout |
 | `web/config.js` | your Supabase URL and anon key |
 | `test/engine.test.js` | rules scenarios |
 | `test/invariants.test.js` | random full games, checking public and secret agree |
 | `test/devserver.mjs` | local Postgres-in-WASM server, dev only |
+
+The client is [Preact](https://preactjs.com) + [htm](https://github.com/developit/htm) loaded
+straight from a CDN — about 4KB, and still no build step. It is there for one reason: the
+previous version rebuilt the whole table on every update, which destroyed the disc elements
+mid-animation. Keyed components let each disc keep its identity so it can actually flip.
+
+Reveal lines are picked from a pool, seeded by state every player already shares (round,
+challenger, bid, outcome), so all six people read the same sentence rather than six different
+ones.
 
 ## Deliberate shortcuts
 

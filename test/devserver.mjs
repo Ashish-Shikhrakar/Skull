@@ -14,7 +14,9 @@ const body = req => new Promise(res => { let b = ''; req.on('data', c => b += c)
 
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x')
-  const send = (code, type, data) => { res.writeHead(code, { 'content-type': type }); res.end(data) }
+  // no-store: otherwise an edit to app.js sits behind the browser's disk cache
+  const send = (code, type, data) =>
+    { res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store' }); res.end(data) }
 
   if (url.pathname.startsWith('/rest/v1/rpc/')) {
     const fn = url.pathname.split('/').pop()
@@ -33,7 +35,8 @@ createServer(async (req, res) => {
   }
 
   // Serve the real client, but hand it this server instead of a Supabase project.
-  if (url.pathname === '/config.js') {
+  // SKULL_REAL_CONFIG=1 keeps web/config.js, to test against a live project.
+  if (url.pathname === '/config.js' && !process.env.SKULL_REAL_CONFIG) {
     return send(200, MIME.js,
       `export const SUPABASE_URL = 'http://localhost:${PORT}'\nexport const SUPABASE_ANON_KEY = 'local-dev'\n`)
   }
