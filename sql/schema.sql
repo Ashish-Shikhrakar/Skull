@@ -227,7 +227,8 @@ declare
   r jsonb;
 begin
   if me is null then raise exception 'You are not in this game'; end if;
-  if coalesce((g->'players'->me->>'out')::boolean, false) and kind <> 'choose_first' then
+  if coalesce((g->'players'->me->>'out')::boolean, false)
+     and kind not in ('choose_first', 'leave') then
     raise exception 'You are out of the game';
   end if;
 
@@ -397,6 +398,45 @@ begin
     g := g || jsonb_build_object('first', tgt, 'pending', null, 'turn', tgt);
     g := skull.log(g, me || ' hands the lead to ' || tgt);
 
+  -- ── leave the table ──────────────────────────────────────────────────────
+  -- In the lobby the seat is simply freed. Mid-game there is no way to patch a
+  -- half-finished round around a missing player — they may be the challenger, the
+  -- high bidder, or the one everyone is waiting on — so the round is voided and a
+  -- fresh one starts. Their discs leave the game with them.
+  elsif kind = 'leave' then
+    if ph = 'lobby' then
+      seats := array_remove(skull.arr(g->'seats'), me);
+      g := jsonb_set(g, '{seats}', to_jsonb(seats));
+      g := g #- array['players', me];
+      s := jsonb_set(s, '{tokens}', (                       -- the seat is gone, so the token must go too
+            select coalesce(jsonb_object_agg(k, v), '{}'::jsonb)
+            from jsonb_each_text(s->'tokens') as tk(k, v) where v <> me));
+      if coalesce(array_length(seats, 1), 0) > 0 and g->>'host' = me then
+        g := jsonb_set(g, '{host}', to_jsonb(seats[1]));    -- somebody has to be able to deal
+      end if;
+
+    elsif ph <> 'over' and not coalesce((g->'players'->me->>'out')::boolean, false) then
+      g := jsonb_set(g, array['players', me, 'out'],    'true'::jsonb);
+      g := jsonb_set(g, array['players', me, 'owned'],  '0'::jsonb);
+      g := jsonb_set(g, array['players', me, 'passed'], 'false'::jsonb);
+      g := jsonb_set(g, array['players', me, 'stack'],  '[]'::jsonb);
+      s := jsonb_set(s, array['hand',  me], '[]'::jsonb);
+      s := jsonb_set(s, array['place', me], '[]'::jsonb);
+      if s->'pendingLoss'->>'pid' = me then s := jsonb_set(s, '{pendingLoss}', 'null'::jsonb); end if;
+      g := skull.log(g, me || ' left the table');
+
+      live := skull.live(g);
+      if coalesce(array_length(live, 1), 0) <= 1 then
+        g := g || jsonb_build_object('winner', live[1], 'phase', 'over',
+                                     'turn', null, 'pending', null, 'outcome', null);
+        g := skull.log(g, live[1] || ' is the last player standing');
+      else
+        g := jsonb_set(g, '{first}', to_jsonb(skull.next(g, me)));
+        r := skull.next_round(g, s); g := r->'g'; s := r->'s';
+        g := skull.log(g, 'Round ' || (g->>'round') || ' — ' || (g->>'first') || ' leads');
+      end if;
+    end if;
+
   -- ── start the next round ─────────────────────────────────────────────────
   elsif kind = 'next' then
     if ph <> 'result' then raise exception 'The round is not over'; end if;
@@ -474,7 +514,7 @@ end $$;
 -- Take a seat, or resume the one you already hold.
 create or replace function public.skull_join(p_code text, p_name text, p_token text)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare v_id uuid; g jsonb; s jsonb; me text; seats text[]; pid text;
+declare v_id uuid; g jsonb; s jsonb; me text; seats text[]; pid text; i int;
 begin
   perform skull.check_token(p_token);
 
@@ -491,10 +531,13 @@ begin
 
   if g->>'phase' <> 'lobby' then raise exception 'That game has already started'; end if;
   seats := skull.arr(g->'seats');
-  if array_length(seats, 1) >= 6 then raise exception 'That game is full'; end if;
 
   p_name := skull.clean_name(p_name);
-  pid := 'p' || (array_length(seats, 1) + 1);
+  pid := null;                                   -- seats can have gaps once someone leaves
+  for i in 1..6 loop
+    if not ('p' || i = any(seats)) then pid := 'p' || i; exit; end if;
+  end loop;
+  if pid is null then raise exception 'That game is full'; end if;
   g := jsonb_set(g, '{seats}', (g->'seats') || to_jsonb(pid));
   g := jsonb_set(g, array['players', pid], skull.seat(p_name));
   s := jsonb_set(s, array['tokens', p_token], to_jsonb(pid));

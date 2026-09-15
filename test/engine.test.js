@@ -441,3 +441,74 @@ test('an eliminated player holds nothing in hand, on the final move or any other
   assert.deepEqual(mine.stack, [R])                       // still on the frozen board
   assert.equal(mine.stack.length, st.players.p1.stack.length)   // secret mirrors the board
 })
+
+test('leaving the lobby frees the seat and the seat id can be reused', async () => {
+  const db = await freshDb()
+  const g = await create(db, 'Ada', token(0))
+  await join(db, g.code, 'Bo', token(1))
+  await join(db, g.code, 'Cy', token(2))
+
+  await act(db, g.id, token(1), { kind: 'leave' })
+  let st = await getState(db, g.id)
+  assert.deepEqual(st.seats, ['p1', 'p3'])
+  assert.equal(st.players.p2, undefined)
+  assert.equal((await view(db, g.id, token(1))).me, null)      // token released
+
+  const back = await join(db, g.code, 'Di', token(3))
+  assert.equal(back.me, 'p2')                                   // the gap is reused, not p3 again
+  st = await getState(db, g.id)
+  assert.equal(st.players.p2.name, 'Di')
+  assert.equal((await act(db, g.id, token(0), { kind: 'start' })).phase, 'ante')
+})
+
+test('the host leaving hands the deal to someone else', async () => {
+  const db = await freshDb()
+  const g = await create(db, 'Ada', token(0))
+  await join(db, g.code, 'Bo', token(1))
+  await join(db, g.code, 'Cy', token(2))
+  await act(db, g.id, token(0), { kind: 'leave' })
+  const st = await getState(db, g.id)
+  assert.equal(st.host, 'p2')
+  await fails(() => act(db, g.id, token(2), { kind: 'start' }), /Only the host/)
+})
+
+test('leaving mid-round voids the round and takes your discs out of the game', async () => {
+  const { db, id, toks } = await table(4)
+  await arrange(db, id, {
+    p1: { hand: [R, S], place: [R, R] }, p2: { hand: [R, R, S], place: [R] },
+    p3: { hand: [R, R, S], place: [R] }, p4: { hand: [R, R, S], place: [R] },
+  }, { phase: 'reveal', first: 'p1', turn: 'p1', challenger: 'p1', bid: 4, bidder: 'p1', flipped: 0 })
+
+  const st = await act(db, id, toks[0], { kind: 'leave' })   // the challenger walks out
+  assert.equal(st.players.p1.out, true)
+  assert.equal(st.players.p1.owned, 0)
+  assert.equal(st.phase, 'ante')                              // round voided, fresh one begins
+  assert.equal(st.first, 'p2')                                // next live player clockwise
+  assert.equal(st.challenger, null)
+  assert.equal(st.bid, null)
+  for (const p of ['p2', 'p3', 'p4']) {
+    assert.deepEqual(st.players[p].stack, [])
+    assert.equal(st.players[p].owned, 4)                      // everyone else is made whole
+  }
+  assert.deepEqual((await view(db, id, toks[0])).hand, [])
+  await fails(() => act(db, id, toks[0], { kind: 'ante', disc: R }), /out of the game/)
+})
+
+test('leaving is harmless once you are out, and the last one standing wins', async () => {
+  const { db, id, toks } = await table(3)
+  await arrange(db, id, {
+    p1: { hand: [R, R, S], place: [R] }, p2: { hand: [R, R, S], place: [R] },
+    p3: { hand: [R, R, S], place: [R] },
+  }, { phase: 'decide', first: 'p1', turn: 'p1' })
+
+  await act(db, id, toks[1], { kind: 'leave' })
+  const again = await act(db, id, toks[1], { kind: 'leave' })   // e.g. a second tab closing
+  assert.equal(again.phase, 'ante')
+  assert.equal(again.round, 2)                                  // not voided twice
+
+  const over = await act(db, id, toks[2], { kind: 'leave' })
+  assert.equal(over.phase, 'over')
+  assert.equal(over.winner, 'p1')
+  await act(db, id, toks[0], { kind: 'leave' })                 // leaving a finished game is a no-op
+  assert.equal((await getState(db, id)).winner, 'p1')
+})
