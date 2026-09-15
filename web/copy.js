@@ -40,7 +40,10 @@ export const lobby = {
   notHost: host => `${host} starts the game once everyone is in.`,
   seated: '(you)',
   host: 'starts',
-  joinedVia: 'You were invited to this table.',
+  joinedVia: 'You have been invited. Put your name in and sit down.',
+  join: 'Take a seat',
+  create: 'Start a new table',
+  or: 'or',
 }
 
 export const turn = {

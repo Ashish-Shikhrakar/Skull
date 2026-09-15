@@ -77,9 +77,15 @@ input::placeholder { color: rgba(237,227,204,.28); }
         padding: 20px; display: grid; gap: 14px; }
 .field { display: grid; gap: 6px; }
 .field > span { font-size: .85rem; color: var(--bone-dim); }
-.joiner { display: flex; gap: 8px; }
-.joiner input { width: 7rem; text-transform: uppercase; letter-spacing: .2em; text-align: center; }
-.joiner button { flex: 1; }
+.codein { font-family: Rye, Georgia, serif; font-size: 1.6rem; letter-spacing: .3em;
+           text-align: center; text-transform: uppercase; color: var(--brass-lit); padding: .35rem .6rem; }
+.or { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--bone-dim); font-size: .8rem; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: rgba(237,227,204,.14); }
+.codebar { display: flex; align-items: stretch; gap: 8px; }
+.codebar .code { flex: 1; }
+button.icon { flex: none; width: 3rem; display: grid; place-items: center; padding: 0; color: var(--bone-dim); }
+button.icon svg { width: 22px; height: 22px; }
+button.icon:hover { color: var(--brass-lit); }
 .steps { margin: 0; padding-left: 1.2em; line-height: 1.9; color: var(--bone-dim); }
 button.code { display: block; width: 100%; font-family: Rye, Georgia, serif;
        font-size: clamp(2.1rem, 11vw, 2.9rem); letter-spacing: .16em; padding: .2em 0 .1em;
@@ -112,20 +118,24 @@ button.code:hover { border-style: solid; border-color: rgba(201,162,39,.7); tran
 /* one lit table in a dark room */
 .felt { position: relative; justify-self: center; align-self: center;
         width: 100%; height: 100%; max-width: 900px; border-radius: 50%;
+        overflow: hidden;
         background:
-          repeating-linear-gradient(45deg,  rgba(255,255,255,.016) 0 1px, transparent 1px 3px),
-          repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px),
-          radial-gradient(circle at 72% 24%, rgba(60,26,14,.13) 0 8%, transparent 8.6%),
+          radial-gradient(circle at 72% 22%, rgba(60,26,14,.11) 0 7%, transparent 7.6%),
           radial-gradient(ellipse 58% 54% at 50% 44%,
                     #244633, #17301F 46%, #0E1F15 72%, #091410 100%);
         box-shadow: inset 0 0 0 1px rgba(201,162,39,.1), inset 0 0 90px rgba(0,0,0,.55),
                     0 24px 70px rgba(0,0,0,.6); }
+/* the disc back, pressed into the felt, with the two faces marked on the cloth */
+.weave { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+         color: #8FC3A4; opacity: .06; }
+.weave .mark { color: #D8C79A; opacity: .55; }
+
 /* the betting line the seats sit on — it is what makes the arc look deliberate */
 .felt::before { content: ""; position: absolute; inset: 7% 9%; border-radius: 50%;
                 border: 1px solid rgba(237,227,204,.09);
                 box-shadow: inset 0 0 6px rgba(0,0,0,.45); pointer-events: none; }
 .felt > .seat { position: absolute; transform: translate(-50%, -50%); z-index: 1; }
-.felt > .seat.is-me { --disc: clamp(58px, 10.5vmin, 108px); }   /* your own discs read largest */
+/* every mat the same size: an enlarged one crowds the near edge, especially on a phone */
 
 .seat { display: grid; justify-items: center; gap: 4px; padding: 6px 8px 8px;
         border: 1px solid transparent; border-radius: 14px; background: none; text-align: center;
@@ -177,12 +187,22 @@ button.code:hover { border-style: solid; border-color: rgba(201,162,39,.7); tran
                       to   { left: var(--tl, 50%); top: var(--tt, 50%); scale: .16; opacity: 0 } }
 
 /* the call, dead centre of the table */
-.call { position: absolute; left: 50%; top: 50%; translate: -50% -50%;
-        width: clamp(88px, 15vmin, 124px); aspect-ratio: 1; border-radius: 50%;
-        display: grid; place-content: center; text-align: center;
-        border: 2px solid rgba(237,227,204,.16); background: rgba(0,0,0,.2); }
-.call.failure { border-color: rgba(201,48,58,.8); box-shadow: 0 0 44px rgba(110,18,27,.45) inset; }
-.call.success { border-color: rgba(201,162,39,.8); box-shadow: 0 0 44px rgba(201,162,39,.2) inset; }
+.call { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2;
+        width: clamp(104px, 19vmin, 152px); aspect-ratio: 1; border-radius: 50%;
+        display: grid; place-content: center; text-align: center; padding: 6px;
+        background: radial-gradient(circle at 50% 38%, #12251A, #0A1710 62%, #061009);
+        border: 1px solid rgba(201,162,39,.32);
+        box-shadow: 0 0 0 6px rgba(6,16,9,.55), 0 0 0 7px rgba(201,162,39,.16),
+                    0 14px 34px rgba(0,0,0,.6), inset 0 2px 10px rgba(0,0,0,.7); }
+/* struck rim: a ring of ticks like the disc backs */
+.call::before { content: ""; position: absolute; inset: 9px; border-radius: 50%;
+        border: 1px dashed rgba(201,162,39,.28); }
+.call.failure { border-color: rgba(201,48,58,.85);
+        box-shadow: 0 0 0 6px rgba(6,16,9,.55), 0 0 0 7px rgba(201,48,58,.3),
+                    0 14px 34px rgba(0,0,0,.6), inset 0 0 40px rgba(110,18,27,.5); }
+.call.success { border-color: rgba(201,162,39,.9);
+        box-shadow: 0 0 0 6px rgba(6,16,9,.55), 0 0 0 7px rgba(201,162,39,.35),
+                    0 14px 34px rgba(0,0,0,.6), inset 0 0 40px rgba(201,162,39,.16); }
 .calling { display: contents; }   /* so .call's grid still centres the two lines */
 .big { font-size: clamp(1.9rem, 5vmin, 2.9rem); line-height: 1; }
 .big i { font-size: .42em; font-style: normal; opacity: .55; }
@@ -248,6 +268,39 @@ button.coin-btn.bare:hover { transform: translateY(-6px); }
 .actions .coin-btn span { display: grid; font-size: .78rem; color: var(--bone-dim); }
 .actions .coin-btn b { font-size: .92rem; color: var(--bone); font-weight: 600; }
 
+/* Struck frame: a double rule, brass studs at the corners and a fleuron on the top
+   rail. Used on the rail, the entry card and the confirm dialog so all the chrome
+   reads as one piece of old furniture. */
+.framed { position: relative; }
+.framed::before, .framed::after { content: ""; position: absolute; pointer-events: none; }
+.framed::before {
+  inset: 4px; border-radius: inherit;
+  border: 1px solid rgba(201,162,39,.3);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.45), inset 0 0 0 3px rgba(201,162,39,.09);
+}
+.framed::after {
+  inset: 7px; border-radius: inherit;
+  background:
+    radial-gradient(circle at 0 0,       #F0D274 1.1px, #A6821A 2.6px, transparent 3px),
+    radial-gradient(circle at 100% 0,    #F0D274 1.1px, #A6821A 2.6px, transparent 3px),
+    radial-gradient(circle at 0 100%,    #F0D274 1.1px, #A6821A 2.6px, transparent 3px),
+    radial-gradient(circle at 100% 100%, #F0D274 1.1px, #A6821A 2.6px, transparent 3px),
+    radial-gradient(circle at 50% 0,     #F0D274 1.1px, #A6821A 2.6px, transparent 3px),
+    radial-gradient(circle at 50% 100%,  #F0D274 1.1px, #A6821A 2.6px, transparent 3px);
+  background-repeat: no-repeat;
+}
+
+.scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+         background: rgba(4,9,6,.72); padding: 20px; }
+.dialog { background: linear-gradient(#16291F, #0D1C14); border: 1px solid rgba(201,162,39,.35);
+          border-radius: 14px; padding: 22px; max-width: 360px; display: grid; gap: 16px;
+          box-shadow: 0 24px 60px rgba(0,0,0,.7); }
+.dialog p { margin: 0; line-height: 1.5; }
+.dialog .row { display: flex; gap: 10px; justify-content: flex-end; }
+button.danger { background: linear-gradient(#8E2028, #62141A); border-color: rgba(201,48,58,.8); }
+
+.aside { display: block; margin-top: .3em; font-size: .86em; color: var(--rose); font-style: italic; }
+
 #toast { position: fixed; left: 50%; bottom: 20px; translate: -50% 0; z-index: 9;
          background: #2B1013; border: 1px solid var(--rose); color: var(--bone);
          padding: .65rem 1rem; border-radius: var(--r); max-width: min(90vw, 420px);
@@ -265,7 +318,10 @@ button.coin-btn.bare:hover { transform: translateY(-6px); }
   .felt { grid-area: 1 / 1 / -1 / -1; justify-self: stretch; align-self: stretch;
           width: 100%; height: 100%; max-width: none; border-radius: 0;
           box-shadow: inset 0 0 120px rgba(0,0,0,.6); }
-  .felt::before { inset: 9% 6%; }
+  /* the whole screen is the table, so the betting line is a rounded rectangle
+     following the edge rather than an ellipse floating in the middle of it */
+  .felt::before { inset: 14px; border-radius: 22px; }
+  .weave { opacity: .05; }
   .rail { grid-area: 1 / 1; z-index: 2; }
   .you  { grid-area: 3 / 1; z-index: 2; align-content: end; }
   .rail { padding: 4px 12px; }
@@ -274,8 +330,7 @@ button.coin-btn.bare:hover { transform: translateY(-6px); }
   .seat { padding: 3px 4px 5px; }
   .who { font-size: .72rem; }
   .pips i { width: 4.5px; height: 4.5px; }
-  .call { width: clamp(72px, 19vmin, 96px); }
-  .call .sub { display: none; }
+  .call { width: clamp(100px, 27vmin, 132px); }
   .hand { --disc: clamp(44px, 13vmin, 58px); gap: 8px; }
   .lip { width: 100%; border-radius: 16px 16px 0 0;
          padding-bottom: max(10px, env(safe-area-inset-bottom)); }

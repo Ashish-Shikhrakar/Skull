@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'https://esm.sh/preact@10.29.8/hooks
 import htm from 'https://esm.sh/htm@3.1.1'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js'
-import * as C from './copy.js?v=18'   // bump ?v= in index.html and here when you deploy a change
+import * as C from './copy.js?v=23'   // bump ?v= in index.html and here when you deploy a change
 
 const html = htm.bind(h)
 const sb = SUPABASE_URL && SUPABASE_ANON_KEY ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
@@ -47,7 +47,7 @@ function seatPositions (seats, me) {
   const i = seats.indexOf(me)
   const others = [...seats.slice(i + 1), ...seats.slice(0, i)]
   const from = phone ? 186 : 200, sweep = phone ? 168 : 140
-  const rx = phone ? 38 : 38, ry = phone ? 34 : 30, cy = phone ? 42 : 48
+  const rx = phone ? 38 : 38, ry = phone ? 31 : 30, cy = phone ? 47 : 48
   const pos = {}
   others.forEach((pid, k) => {
     const t = others.length === 1 ? 0.5 : k / (others.length - 1)
@@ -57,6 +57,10 @@ function seatPositions (seats, me) {
   pos[me] = { left: 50, top: phone ? 68 : 86 }
   return { pos, others }
 }
+
+let ask = null
+const confirmAsk = msg => new Promise(res => { ask = { msg, res }; emit() })
+const answer = v => { ask?.res(v); ask = null; emit() }
 
 let toastMsg = ''
 function toast (m) {
@@ -81,7 +85,7 @@ async function refresh () {
 }
 
 async function send (action) {
-  if (busy) return
+  if (busy && action.kind !== 'leave') return
   busy = true
   try { await call('skull_act', { p_game: G.id, p_token: ls.token, p_act: action }); await refresh() }
   catch (e) { toast(e.message) }
@@ -153,10 +157,11 @@ function Disc ({ face, seat, ghost, small, revealed }) {
   useEffect(() => {
     if (!was.current && revealed && ref.current) {
       ref.current.animate(
-        [{ transform: 'rotateY(-92deg) scale(1.08)', offset: 0 },
-         { transform: 'rotateY(-30deg) scale(1.08)', offset: .45 },
-         { transform: 'rotateY(0) scale(1)', offset: 1 }],
-        { duration: 460, easing: 'cubic-bezier(.2,.7,.3,1)' })
+        [{ transform: 'perspective(600px) rotateY(-100deg) scale(1.22)', filter: 'brightness(2.2)', offset: 0 },
+         { transform: 'perspective(600px) rotateY(-24deg) scale(1.22)', filter: 'brightness(1.5)', offset: .5 },
+         { transform: 'perspective(600px) rotateY(0) scale(1.1)',       filter: 'brightness(1.2)', offset: .78 },
+         { transform: 'none', filter: 'none', offset: 1 }],
+        { duration: 620, easing: 'cubic-bezier(.2,.7,.3,1)' })
     }
     was.current = revealed
   }, [revealed])
@@ -242,28 +247,31 @@ function Setup () {
 }
 
 function Entry () {
-  const invited = new URLSearchParams(location.search).get('t') || ''
+  const invited = (new URLSearchParams(location.search).get('t') || '').toUpperCase().slice(0, 4)
   const [name, setName] = useState(ls.name)
-  const [code, setCode] = useState(invited.toUpperCase().slice(0, 4))
+  const [code, setCode] = useState(invited)
+  const ready = name.trim() && code.trim().length === 4
   const go = async fn => { try { ls.name = name.trim(); await fn() } catch (e) { toast(e.message) } }
+  const join = () => go(async () =>
+    enter(await call('skull_join', { p_code: code.trim().toUpperCase(), p_name: name.trim(), p_token: ls.token })))
 
   return html`<div class="page narrow">
     <h1 class="title">Skull & Roses</h1>
     <p class="lede">${invited ? C.lobby.joinedVia : C.lobby.tagline}</p>
-    <div class="card">
+    <form class="card framed" onSubmit=${e => { e.preventDefault(); if (ready) join() }}>
       <label class="field"><span>Your name</span>
         <input value=${name} maxLength=${16} placeholder="Ada" autocomplete="nickname"
-               onInput=${e => setName(e.target.value)}/></label>
-      <button class="primary" disabled=${!name.trim()}
+               autofocus=${!!invited} onInput=${e => setName(e.target.value)}/></label>
+      <label class="field"><span>Table code</span>
+        <input class="codein" value=${code} maxLength=${4} placeholder="••••" aria-label="Table code"
+               spellcheck=${false} autocapitalize="characters"
+               onInput=${e => setCode(e.target.value.toUpperCase())}/></label>
+      <button class="primary" disabled=${!ready}>${C.lobby.join}</button>
+      <p class="or"><span>${C.lobby.or}</span></p>
+      <button type="button" disabled=${!name.trim()}
         onClick=${() => go(async () => enter(await call('skull_create', { p_name: name.trim(), p_token: ls.token })))}>
-        Start a table</button>
-      <form class="joiner" onSubmit=${e => { e.preventDefault(); go(async () =>
-          enter(await call('skull_join', { p_code: code.trim().toUpperCase(), p_name: name.trim(), p_token: ls.token }))) }}>
-        <input value=${code} maxLength=${4} placeholder="CODE" aria-label="Table code"
-               spellcheck=${false} onInput=${e => setCode(e.target.value)}/>
-        <button disabled=${!name.trim() || code.trim().length < 4}>Join</button>
-      </form>
-    </div>
+        ${C.lobby.create}</button>
+    </form>
     <div class="fan" aria-hidden="true">
       <${Disc} face="rose"/><${Disc} face="rose"/><${Disc} face="rose"/><${Disc} face="skull"/>
     </div></div>`
@@ -278,12 +286,14 @@ function Lobby () {
     <h1 class="title small">Skull & Roses</h1>
     <div class="card">
       <p class="muted">${C.lobby.code}</p>
-      <button class="code" title=${C.lobby.copy}
-        onClick=${() => copyCode(G.code, () => flash(C.lobby.copied))}>${G.code ?? ''}</button>
-      <div class="invite">
-        <button onClick=${() => copyCode(G.code, () => flash(C.lobby.copied))}>${C.lobby.copy}</button>
-        <button onClick=${() => shareTable(G.code, () => flash(C.lobby.shared))}>${C.lobby.share}</button>
+      <div class="codebar">
+        <button class="code" title=${C.lobby.copy}
+          onClick=${() => copyCode(G.code, () => flash(C.lobby.copied))}>${G.code ?? ''}</button>
+        <button class="icon" title=${C.lobby.copy} aria-label=${C.lobby.copy}
+          onClick=${() => copyCode(G.code, () => flash(C.lobby.copied))}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg></button>
       </div>
+      <button onClick=${() => shareTable(G.code, () => flash(C.lobby.shared))}>${C.lobby.share}</button>
       <p class="said" aria-live="polite">${said}</p>
       <ul class="roster">${s.seats.map(pid => html`
         <li key=${pid} style=${{ '--seat': ink(pid) }}>
@@ -297,7 +307,7 @@ function Lobby () {
             ${n < 3 ? C.lobby.waiting(3 - n) : C.lobby.ready}</button>`
         : html`<p class="muted">${C.lobby.notHost(s.players[s.host].name)}</p>`}
       <button class="ghost" onClick=${async () => {
-        if (!confirm(C.leaving.confirmLobby)) return
+        if (!await confirmAsk(C.leaving.confirmLobby)) return
         await send({ kind: 'leave' }); quit()
       }}>${C.leaving.button}</button>
     </div></div>`
@@ -403,12 +413,23 @@ function Table () {
       <span class="brand">Skull & Roses</span>
       <span class="muted">Round ${s.round} · ${G.code ?? ''}</span>
       <button class="ghost" onClick=${async () => {
-        if (!confirm(s.phase === 'over' ? C.leaving.confirmLobby : C.leaving.confirmGame)) return
+        if (!await confirmAsk(s.phase === 'over' ? C.leaving.confirmLobby : C.leaving.confirmGame)) return
         await send({ kind: 'leave' }); quit()
       }}>${C.leaving.button}</button>
     </header>
 
     <section class="felt">
+      <svg class="weave" aria-hidden="true">
+        <defs>
+          <pattern id="p-weave" width="164" height="164" patternUnits="userSpaceOnUse">
+            <use href="#m-rosette" x="14" y="14" width="54" height="54"/>
+            <use href="#m-rosette" x="96" y="96" width="54" height="54"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#p-weave)"/>
+        <use href="#m-rose"  class="mark" x="4%"  y="60%" width="19%" height="19%"/>
+        <use href="#m-skull" class="mark" x="77%" y="16%" width="17%" height="17%"/>
+      </svg>
       ${o ? html`<div class=${'verdict ' + o.result} key=${seed}
           style=${o.result === 'failure' && pos[o.skullOwner]
             ? { '--tl': pos[o.skullOwner].left + '%', '--tt': pos[o.skullOwner].top + '%' } : null}/>` : null}
@@ -440,9 +461,9 @@ function Table () {
                 : html`<span class=${'coin-btn bare idle' + (out ? ' leaving' : '')} key=${d + k}><${Disc} face=${d}/></span>`
             }))}
       </div>
-      ${G.losing ? html`<p class="losing">${C.penalty.losing(G.losing)}</p>` : null}
-      <div class=${'lip' + (myTurn() || canAnte() || canFlip() || s.pending?.by === G.me ? ' lit' : '')}>
-        <p class="prompt">${prompt()}</p>
+      <div class=${'lip framed' + (myTurn() || canAnte() || canFlip() || s.pending?.by === G.me ? ' lit' : '')}>
+        <p class="prompt">${prompt()}
+          ${G.losing ? html`<i class="aside">(${C.penalty.losing(G.losing)})</i>` : null}</p>
         <div class="actions"><${Actions}/></div>
       </div>
     </section>
@@ -467,6 +488,14 @@ function App () {
     : g.state.phase === 'lobby' ? html`<${Lobby}/>` : html`<${Table}/>`
   return html`<${'div'}>
     ${screen}
+    ${ask ? html`<div class="scrim" onClick=${() => answer(false)}>
+      <div class="dialog framed" role="dialog" aria-modal="true" onClick=${e => e.stopPropagation()}>
+        <p>${ask.msg}</p>
+        <div class="row">
+          <button onClick=${() => answer(false)}>Stay</button>
+          <button class="danger" onClick=${() => answer(true)}>${C.leaving.button}</button>
+        </div>
+      </div></div>` : null}
     <p id="say" class="sr-only" role="status" aria-live="polite">${g && g.state.phase !== 'lobby' ? prompt() : ''}</p>
     <div id="toast" class=${toastMsg ? 'show' : ''} role="status" aria-live="assertive">${toastMsg}</div>
   <//>`
@@ -474,7 +503,8 @@ function App () {
 
 ;(async () => {
   render(html`<${App}/>`, document.getElementById('app'))
-  if (!sb || !ls.game) return
+  const invited = new URLSearchParams(location.search).has('t')
+  if (!sb || !ls.game || invited) return      // an invite link lands on the join screen
   try { G = { id: ls.game }; watch(ls.game); await refresh() }
   catch { ls.game = ''; G = null; emit() }
 })()
