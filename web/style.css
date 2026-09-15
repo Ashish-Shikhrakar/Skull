@@ -81,7 +81,14 @@ input::placeholder { color: rgba(237,227,204,.28); }
 .joiner input { width: 7rem; text-transform: uppercase; letter-spacing: .2em; text-align: center; }
 .joiner button { flex: 1; }
 .steps { margin: 0; padding-left: 1.2em; line-height: 1.9; color: var(--bone-dim); }
-.code { font-size: 2.6rem; letter-spacing: .14em; margin: 0; color: var(--brass-lit); text-align: center; }
+button.code { display: block; width: 100%; font-family: Rye, Georgia, serif;
+       font-size: clamp(2.1rem, 11vw, 2.9rem); letter-spacing: .16em; padding: .2em 0 .1em;
+       color: var(--brass-lit); background: none; border: 1px dashed rgba(201,162,39,.3);
+       border-radius: 12px; cursor: copy; }
+button.code:hover { border-style: solid; border-color: rgba(201,162,39,.7); transform: none; }
+.invite { display: flex; gap: 8px; }
+.invite button { flex: 1; }
+.said { margin: 0; min-height: 1.2em; text-align: center; font-size: .82rem; color: var(--brass-lit); }
 .roster { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
 .roster li { display: flex; align-items: baseline; gap: 8px; }
 .roster .chip { align-self: center; }
@@ -96,7 +103,7 @@ input::placeholder { color: rgba(237,227,204,.28); }
 .fan .disc:nth-child(3) { --t: 5deg }   .fan .disc:nth-child(4) { --t: 14deg }
 
 /* ── the table ─────────────────────────────────────────────────────────── */
-.page.table { height: 100dvh; display: grid; grid-template-rows: auto minmax(0,1fr) auto auto;
+.page.table { position: relative; height: 100dvh; display: grid; grid-template-rows: auto minmax(0,1fr) auto;   /* rail, table, your edge */
               gap: clamp(2px, .8vh, 10px); padding: 8px clamp(10px, 2vw, 22px) clamp(8px, 1.6vh, 16px);
               max-width: 1080px; margin: 0 auto; }
 .rail { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: .8rem; }
@@ -105,18 +112,34 @@ input::placeholder { color: rgba(237,227,204,.28); }
 /* one lit table in a dark room */
 .felt { position: relative; justify-self: center; align-self: center;
         width: 100%; height: 100%; max-width: 900px; border-radius: 50%;
-        background: radial-gradient(ellipse 58% 54% at 50% 44%,
+        background:
+          repeating-linear-gradient(45deg,  rgba(255,255,255,.016) 0 1px, transparent 1px 3px),
+          repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px),
+          radial-gradient(circle at 72% 24%, rgba(60,26,14,.13) 0 8%, transparent 8.6%),
+          radial-gradient(ellipse 58% 54% at 50% 44%,
                     #244633, #17301F 46%, #0E1F15 72%, #091410 100%);
         box-shadow: inset 0 0 0 1px rgba(201,162,39,.1), inset 0 0 90px rgba(0,0,0,.55),
                     0 24px 70px rgba(0,0,0,.6); }
-.felt > .seat { position: absolute; transform: translate(-50%, -50%); }
+/* the betting line the seats sit on — it is what makes the arc look deliberate */
+.felt::before { content: ""; position: absolute; inset: 7% 9%; border-radius: 50%;
+                border: 1px solid rgba(237,227,204,.09);
+                box-shadow: inset 0 0 6px rgba(0,0,0,.45); pointer-events: none; }
+.felt > .seat { position: absolute; transform: translate(-50%, -50%); z-index: 1; }
 .felt > .seat.is-me { --disc: clamp(58px, 10.5vmin, 108px); }   /* your own discs read largest */
 
 .seat { display: grid; justify-items: center; gap: 4px; padding: 6px 8px 8px;
         border: 1px solid transparent; border-radius: 14px; background: none; text-align: center;
         font: inherit; color: inherit; }
 .seat:disabled { opacity: 1; cursor: default; }
-.seat.active     { border-color: rgba(201,162,39,.5); background: rgba(201,162,39,.08); }
+.seat.active .nm { color: var(--brass-lit); }
+.mat::after  { content: ""; position: absolute; left: 50%; bottom: -5px; translate: -50% 0;
+               width: 0; height: 3px; border-radius: 2px; background: var(--brass-lit);
+               transition: width .22s var(--ease); }
+.seat.active .mat::after { width: 72%; box-shadow: 0 0 12px rgba(232,195,92,.65); }
+.seat.leads .mat::before { content: ""; position: absolute; top: -5px; right: -5px;
+               width: 15px; height: 15px; border-radius: 50%;
+               background: radial-gradient(circle at 34% 30%, #F0D274, #C9A227 60%, #7C5F10);
+               box-shadow: 0 2px 0 rgba(0,0,0,.5); }
 .seat.challenger { border-color: rgba(201,48,58,.55); background: rgba(201,48,58,.1); }
 .seat.passed     { opacity: .55; }
 .seat.out        { opacity: .3; filter: grayscale(.85); }
@@ -129,7 +152,8 @@ input::placeholder { color: rgba(237,227,204,.28); }
        display: flex; align-items: end; justify-content: center; padding: 6px;
        border-radius: 12px; background: rgba(0,0,0,.28);
        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--seat) 26%, transparent); }
-.seat.leads .mat  { box-shadow: inset 0 0 0 1px rgba(201,162,39,.7), 0 0 20px rgba(201,162,39,.12); }
+.seat.leads .mat  { box-shadow: inset 0 0 0 1px rgba(201,162,39,.55); }
+.seat.hit .mat    { box-shadow: inset 0 0 0 1px rgba(201,48,58,.75), 0 0 26px -4px rgba(201,48,58,.5); }
 .seat.target .mat { box-shadow: inset 0 0 0 2px var(--brass-lit); }
 .stack { position: relative; width: var(--disc); height: var(--disc); }
 .slot { position: absolute; left: 0; bottom: calc(var(--i) * var(--lift)); }
@@ -141,6 +165,17 @@ input::placeholder { color: rgba(237,227,204,.28); }
 .pips i { width: 6px; height: 6px; border-radius: 50%; background: rgba(237,227,204,.15); }
 .pips i.on { background: var(--seat); }
 
+/* The reveal. Success opens outward; failure closes in on whoever owned the skull, so
+   you read the outcome AND the culprit from the corner of your eye. */
+.verdict { position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+           width: 56%; aspect-ratio: 1.6; border-radius: 50%; pointer-events: none; z-index: 0; }
+.verdict.success { border: 14px solid rgba(201,162,39,.45); animation: radiate .76s var(--ease) forwards; }
+.verdict.failure { border: 3px solid rgba(201,48,58,.75); animation: converge .62s var(--ease) forwards; }
+@keyframes radiate { from { scale: .26; border-width: 14px; opacity: .95 }
+                     to   { scale: 1.04; border-width: 1.5px; opacity: 0 } }
+@keyframes converge { from { scale: 1; opacity: .9 }
+                      to   { left: var(--tl, 50%); top: var(--tt, 50%); scale: .16; opacity: 0 } }
+
 /* the call, dead centre of the table */
 .call { position: absolute; left: 50%; top: 50%; translate: -50% -50%;
         width: clamp(88px, 15vmin, 124px); aspect-ratio: 1; border-radius: 50%;
@@ -148,9 +183,16 @@ input::placeholder { color: rgba(237,227,204,.28); }
         border: 2px solid rgba(237,227,204,.16); background: rgba(0,0,0,.2); }
 .call.failure { border-color: rgba(201,48,58,.8); box-shadow: 0 0 44px rgba(110,18,27,.45) inset; }
 .call.success { border-color: rgba(201,162,39,.8); box-shadow: 0 0 44px rgba(201,162,39,.2) inset; }
+.calling { display: contents; }   /* so .call's grid still centres the two lines */
 .big { font-size: clamp(1.9rem, 5vmin, 2.9rem); line-height: 1; }
 .big i { font-size: .42em; font-style: normal; opacity: .55; }
 .big.quiet { opacity: .2; }
+.stamp { font-family: Rye, Georgia, serif; font-size: clamp(.82rem, 2.3vmin, 1.12rem);
+         line-height: 1.05; padding: 0 .3em; text-align: center; mix-blend-mode: screen;
+         rotate: var(--tilt, 0deg); animation: stamp .3s var(--ease) both; animation-delay: .12s; }
+.stamp.success { color: var(--brass-lit); }
+.stamp.failure { color: #F0757C; }
+@keyframes stamp { from { scale: 2.6; opacity: 0 } 60% { scale: 1.06; opacity: 1 } to { scale: 1; opacity: 1 } }
 .sub { font-size: .66rem; letter-spacing: .08em; color: var(--bone-dim); }
 
 .prompt { margin: 0; text-align: center; font-size: clamp(.95rem, 2.2vw, 1.1rem);
@@ -168,10 +210,35 @@ button.coin-btn.bare:hover { transform: translateY(-6px); }
 .coin-btn.leaving .disc { filter: grayscale(.9) brightness(.55); }
 .losing { margin: 0; font-size: .8rem; color: var(--rose); text-align: center; }
 
-.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; min-height: 38px; }
-.bidrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
-.bids { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
-.num { padding: .4rem .7rem; font-variant-numeric: tabular-nums; }
+.lip { width: min(100%, 640px); border-radius: 14px 14px 10px 10px;
+        padding: 8px clamp(10px, 2vw, 18px) 10px;
+        background: linear-gradient(#152a1f, #0E1F16);
+        box-shadow: inset 0 1px 0 rgba(237,227,204,.06), 0 -6px 18px rgba(0,0,0,.35);
+        display: grid; gap: 6px; justify-items: center;
+        transition: box-shadow .25s var(--ease), filter .25s var(--ease), translate .25s var(--ease);
+        filter: brightness(.72); translate: 0 3px; }
+.lip.lit { filter: none; translate: 0;                       /* lit when the move is yours */
+           box-shadow: inset 0 1px 0 rgba(232,195,92,.28), 0 -8px 26px rgba(0,0,0,.4); }
+.lip .prompt { min-height: 2.5em; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; min-height: 44px; }
+.bidrow { display: flex; gap: 10px; align-items: center; justify-content: center; width: 100%; }
+.bids { display: flex; gap: 6px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory;
+        padding: 2px; scrollbar-width: none; }
+.bids::-webkit-scrollbar { display: none; }
+.bid-chip { flex: none; scroll-snap-align: center;
+        width: 2.6rem; height: 2.6rem; padding: 0; border-radius: 50%;
+        font-family: Rye, Georgia, serif; font-size: 1.05rem; line-height: 1;
+        color: #21180A; border: 2px solid rgba(255,245,210,.3);
+        background: radial-gradient(circle at 36% 30%, #E8C35C, #C9A227 62%, #A6821A);
+        box-shadow: 0 3px 0 #6B520D; transition: translate .08s var(--ease), box-shadow .08s var(--ease); }
+.bid-chip:hover:not(:disabled) { border-color: rgba(255,245,210,.65); }
+.bid-chip:active { translate: 0 3px; box-shadow: 0 0 0 #6B520D; }
+.bid-chip.shove { color: #23201A; background: radial-gradient(circle at 36% 30%, #FDF6E2, #E4D5B2 62%, #BCA478);
+              box-shadow: 0 3px 0 #7C6B48; }
+.bid-chip.shove:active { box-shadow: 0 0 0 #7C6B48; }
+.pass { order: -1; margin-right: auto; border-radius: 999px; padding: .5rem 1.1rem;
+        background: none; border: 1px solid rgba(237,227,204,.35); color: var(--bone); }
 .ask { margin: 0; color: var(--bone-dim); font-size: .85rem; }
 .choice { display: grid; gap: 8px; justify-items: center; }
 .choice .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -187,12 +254,39 @@ button.coin-btn.bare:hover { transform: translateY(-6px); }
          opacity: 0; pointer-events: none; transition: opacity .2s, translate .2s; }
 #toast.show { opacity: 1; translate: -50% -6px; }
 
+/* ── phone: the table IS the screen ───────────────────────────────────────── */
 @media (max-width: 560px) {
-  :root { --disc: clamp(38px, 9vmin, 52px); }
-  .felt { border-radius: 50% / 40%; }
-  .seat { padding: 4px 5px 6px; }
-  .who { font-size: .76rem; }
+  :root { --disc: clamp(30px, 8.4vmin, 44px); --lift: calc(var(--disc) * .46); }
+  .page.table { padding: 0; gap: 0; grid-template-columns: 1fr;
+                grid-template-rows: 30px minmax(0,1fr) auto; }
+  /* The table IS the screen: the felt spans every row and the chrome sits on top of it.
+     It stays in flow — taking it out with position:absolute makes align-self:center
+     shrink it to nothing, and then every seat percentage resolves against a 0x0 box. */
+  .felt { grid-area: 1 / 1 / -1 / -1; justify-self: stretch; align-self: stretch;
+          width: 100%; height: 100%; max-width: none; border-radius: 0;
+          box-shadow: inset 0 0 120px rgba(0,0,0,.6); }
+  .felt::before { inset: 9% 6%; }
+  .rail { grid-area: 1 / 1; z-index: 2; }
+  .you  { grid-area: 3 / 1; z-index: 2; align-content: end; }
+  .rail { padding: 4px 12px; }
+  .rail .brand { display: none; }
+  .felt > .seat.is-me { --disc: clamp(44px, 12.5vmin, 60px); }
+  .seat { padding: 3px 4px 5px; }
+  .who { font-size: .72rem; }
+  .pips i { width: 4.5px; height: 4.5px; }
+  .call { width: clamp(72px, 19vmin, 96px); }
+  .call .sub { display: none; }
+  .hand { --disc: clamp(44px, 13vmin, 58px); gap: 8px; }
+  .lip { width: 100%; border-radius: 16px 16px 0 0;
+         padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .bid-chip { width: 2.75rem; height: 2.75rem; }
+  .prompt { font-size: .92rem; }
 }
+
+/* Every keyframe above ends at its resting style, so zeroing durations leaves the
+   table in the right state. Only the travelling ring needs its own treatment. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .verdict { animation: none !important; opacity: .55; }
+  .verdict.failure { left: var(--tl, 50%); top: var(--tt, 50%); scale: .3; }
 }

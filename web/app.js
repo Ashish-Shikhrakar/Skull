@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'https://esm.sh/preact@10.29.8/hooks
 import htm from 'https://esm.sh/htm@3.1.1'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js'
-import * as C from './copy.js?v=10'   // bump ?v= in index.html and here when you deploy a change
+import * as C from './copy.js?v=18'   // bump ?v= in index.html and here when you deploy a change
 
 const html = htm.bind(h)
 const sb = SUPABASE_URL && SUPABASE_ANON_KEY ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
@@ -35,6 +35,27 @@ function useGame () {
     return () => subs.delete(f)
   }, [])
   return G
+}
+
+const phoneQ = matchMedia('(max-width: 560px)')
+let phone = phoneQ.matches
+addEventListener('resize', () => { const p = phoneQ.matches; if (p !== phone) { phone = p; emit() } })
+
+// Where each seat sits on the felt, in percentages. Promoted out of the table so the
+// reveal can travel to a seat without duplicating the maths.
+function seatPositions (seats, me) {
+  const i = seats.indexOf(me)
+  const others = [...seats.slice(i + 1), ...seats.slice(0, i)]
+  const from = phone ? 186 : 200, sweep = phone ? 168 : 140
+  const rx = phone ? 38 : 38, ry = phone ? 34 : 30, cy = phone ? 42 : 48
+  const pos = {}
+  others.forEach((pid, k) => {
+    const t = others.length === 1 ? 0.5 : k / (others.length - 1)
+    const a = (from + sweep * t) * Math.PI / 180
+    pos[pid] = { left: 50 + rx * Math.cos(a), top: cy + ry * Math.sin(a) }
+  })
+  pos[me] = { left: 50, top: phone ? 68 : 86 }
+  return { pos, others }
 }
 
 let toastMsg = ''
@@ -163,6 +184,7 @@ function Seat ({ pid, mineSeat, style }) {
   const cls = ['seat',
     p.out && 'out', s.turn === pid && !p.out && 'active', s.challenger === pid && 'challenger',
     s.first === pid && s.phase !== 'over' && 'leads', p.passed && 'passed',
+    s.outcome?.result === 'failure' && s.outcome.skullOwner === pid && 'hit',
     targetable && 'target', mineSeat && 'is-me'].filter(Boolean).join(' ')
 
   const body = html`
@@ -177,13 +199,32 @@ function Seat ({ pid, mineSeat, style }) {
       ${[0, 1, 2, 3].map(i => html`<i key=${i} class=${i < p.owned ? 'on' : ''}/>`)}
     </div>
     ${p.out ? html`<span class="tagline">${C.leaving.seatEliminated}</span>`
-      : p.passed ? html`<span class="tagline">stepped back</span>`
+      : p.passed ? html`<span class="tagline">passed</span>`
       : s.bidder === pid ? html`<span class="tagline bid">bid ${s.bid}</span>` : null}`
 
   // Always a button, even when it is not a target: swapping the element type would
   // make Preact tear down the discs inside and the flip animation would never play.
   return html`<button class=${cls} style=${{ ...style, '--seat': ink(pid) }}
       disabled=${!targetable} onClick=${() => send({ kind: 'flip', target: pid })}>${body}</button>`
+}
+
+const inviteUrl = code => `${location.origin}${location.pathname}?t=${code}`
+
+// Copy, or hand off to the OS share sheet on a phone. Either way something lands
+// on the clipboard, so the button can always report what happened.
+async function shareTable (code, said) {
+  const url = inviteUrl(code)
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Skull & Roses', text: `Sit down at my table. Code ${code}.`, url }); return }
+    catch (e) { if (e.name === 'AbortError') return }        // they closed the sheet
+  }
+  try { await navigator.clipboard.writeText(url); said() }
+  catch { toast(url) }                                       // no clipboard permission: show it instead
+}
+
+async function copyCode (code, said) {
+  try { await navigator.clipboard.writeText(code); said() }
+  catch { toast(code) }
 }
 
 // ── screens ─────────────────────────────────────────────────────────────────
@@ -201,13 +242,14 @@ function Setup () {
 }
 
 function Entry () {
+  const invited = new URLSearchParams(location.search).get('t') || ''
   const [name, setName] = useState(ls.name)
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(invited.toUpperCase().slice(0, 4))
   const go = async fn => { try { ls.name = name.trim(); await fn() } catch (e) { toast(e.message) } }
 
   return html`<div class="page narrow">
     <h1 class="title">Skull & Roses</h1>
-    <p class="lede">${C.lobby.tagline}</p>
+    <p class="lede">${invited ? C.lobby.joinedVia : C.lobby.tagline}</p>
     <div class="card">
       <label class="field"><span>Your name</span>
         <input value=${name} maxLength=${16} placeholder="Ada" autocomplete="nickname"
@@ -229,11 +271,20 @@ function Entry () {
 
 function Lobby () {
   const s = G.state, host = s.host === G.me, n = s.seats.length
+  const [said, setSaid] = useState('')
+  const flash = m => { setSaid(m); clearTimeout(flash.t); flash.t = setTimeout(() => setSaid(''), 1800) }
+
   return html`<div class="page narrow">
     <h1 class="title small">Skull & Roses</h1>
     <div class="card">
       <p class="muted">${C.lobby.code}</p>
-      <p class="code">${G.code ?? ''}</p>
+      <button class="code" title=${C.lobby.copy}
+        onClick=${() => copyCode(G.code, () => flash(C.lobby.copied))}>${G.code ?? ''}</button>
+      <div class="invite">
+        <button onClick=${() => copyCode(G.code, () => flash(C.lobby.copied))}>${C.lobby.copy}</button>
+        <button onClick=${() => shareTable(G.code, () => flash(C.lobby.shared))}>${C.lobby.share}</button>
+      </div>
+      <p class="said" aria-live="polite">${said}</p>
       <ul class="roster">${s.seats.map(pid => html`
         <li key=${pid} style=${{ '--seat': ink(pid) }}>
           <span class="chip"/><span class="nm">${s.players[pid].name}</span>
@@ -243,7 +294,7 @@ function Lobby () {
       ${host
         ? html`<button class="primary" disabled=${n < 3}
             onClick=${() => send({ kind: 'start' })}>
-            ${n < 3 ? C.lobby.waiting(3 - n) : C.lobby.ready(n)}</button>`
+            ${n < 3 ? C.lobby.waiting(3 - n) : C.lobby.ready}</button>`
         : html`<p class="muted">${C.lobby.notHost(s.players[s.host].name)}</p>`}
       <button class="ghost" onClick=${async () => {
         if (!confirm(C.leaving.confirmLobby)) return
@@ -274,8 +325,8 @@ function prompt () {
       if (!o) return ''
       return C.reveal(o.result, {
         bid: s.bid,
-        winner: C.you(nameOf(o.challenger), o.challenger === G.me),
-        owner: C.you(nameOf(o.skullOwner), o.skullOwner === G.me),
+        W: C.who(nameOf(o.challenger), o.challenger === G.me),
+        O: o.skullOwner ? C.who(nameOf(o.skullOwner), o.skullOwner === G.me) : null,
         seed: `${s.round}:${o.challenger}:${s.bid}:${o.result}`,
       })
     }
@@ -318,12 +369,15 @@ function Actions () {
 
   if ((s.phase === 'decide' || s.phase === 'bid') && myTurn()) {
     const from = (s.bid ?? 0) + 1, max = inPlay(s)
+    // Six players put up to 24 discs on the table. Offer the next few and the all-in,
+    // not every number in between.
+    const chips = [...new Set([...Array.from({ length: Math.min(5, max - from + 1) }, (_, i) => from + i), max])]
     return html`<div class="bidrow">
-      ${from <= max ? html`<div class="bids"><span class="ask">Bid</span>
-        ${Array.from({ length: max - from + 1 }, (_, i) => html`
-          <button class="num" key=${from + i} onClick=${() => send({ kind: 'bid', n: from + i })}>${from + i}</button>`)}
+      ${s.phase === 'bid' ? html`<button class="pass" onClick=${() => send({ kind: 'pass' })}>${C.actions.pass}</button>` : null}
+      ${from <= max ? html`<div class="bids">
+        ${chips.map(n => html`<button class=${'bid-chip' + (n === max && max > from ? ' shove' : '')} key=${n}
+            onClick=${() => send({ kind: 'bid', n })}>${n}</button>`)}
       </div>` : null}
-      ${s.phase === 'bid' ? html`<button onClick=${() => send({ kind: 'pass' })}>Step back</button>` : null}
     </div>`
   }
   return null
@@ -331,20 +385,18 @@ function Actions () {
 
 function Table () {
   const s = G.state
-  const i = s.seats.indexOf(G.me)
-  const others = [...s.seats.slice(i + 1), ...s.seats.slice(0, i)]
+  const { pos, others } = seatPositions(s.seats, G.me)
   const playable = canAnte() || (s.phase === 'decide' && myTurn())
   const kind = s.phase === 'ante' ? 'ante' : 'place'
   const counts = G.hand.reduce((m, d) => (m[d] = (m[d] || 0) + 1, m), {})
   let leaving = G.losing
   const mark = d => (leaving === d && !(leaving = null))
 
-  // Opponents ring the far arc, you sit at the near edge — one table, not two rows.
-  const place = (k, n) => {
-    const t = n === 1 ? 0.5 : k / (n - 1)
-    const a = (200 + 140 * t) * Math.PI / 180
-    return { left: `${50 + 38 * Math.cos(a)}%`, top: `${48 + 30 * Math.sin(a)}%` }
-  }
+  const at = pid => ({ left: `${pos[pid].left}%`, top: `${pos[pid].top}%` })
+  const o = s.outcome
+  const seed = o ? `${s.round}:${o.challenger}:${s.bid}:${o.result}` : ''
+  const word = !o ? '' : o.result === 'success' ? C.verdict.success(s.bid)
+    : o.skullOwner === o.challenger ? C.verdict.ownSkull : C.verdict.theirSkull
 
   return html`<div class="page table">
     <header class="rail">
@@ -357,19 +409,24 @@ function Table () {
     </header>
 
     <section class="felt">
-      ${others.map((pid, k) => html`<${Seat} key=${pid} pid=${pid} style=${place(k, others.length)}/>`)}
-      <${Seat} key=${G.me} pid=${G.me} mineSeat=${true} style=${{ left: '50%', top: '86%' }}/>
-      <div class=${`call ${s.outcome?.result ?? ''}`}>
-        ${s.phase === 'reveal'
-          ? html`<span class="big">${s.flipped}<i>/${s.bid}</i></span>`
-          : s.bid ? html`<span class="big">${s.bid}</span>`
-          : html`<span class="big quiet">${s.phase === 'over' ? '★' : '·'}</span>`}
-        <span class="sub">${s.phase === 'reveal' ? 'turned over'
-          : s.bid ? `${nameOf(s.bidder)}’s bid` : s.phase === 'ante' ? 'lay one down' : 'no bid yet'}</span>
+      ${o ? html`<div class=${'verdict ' + o.result} key=${seed}
+          style=${o.result === 'failure' && pos[o.skullOwner]
+            ? { '--tl': pos[o.skullOwner].left + '%', '--tt': pos[o.skullOwner].top + '%' } : null}/>` : null}
+      ${others.map(pid => html`<${Seat} key=${pid} pid=${pid} style=${at(pid)}/>`)}
+      <${Seat} key=${G.me} pid=${G.me} mineSeat=${true} style=${at(G.me)}/>
+      <div class=${`call ${o?.result ?? ''}`}>
+        ${o && (s.phase === 'result' || s.phase === 'over')
+          ? html`<span class=${'stamp ' + o.result} key=${seed}
+              style=${{ '--tilt': (o.result === 'failure' ? (C.hash(seed) % 9) - 4 : 0) + 'deg' }}>${word}</span>`
+          : html`<div class="calling">
+              ${s.phase === 'reveal' ? html`<span class="big">${s.flipped}<i>/${s.bid}</i></span>`
+                : s.bid ? html`<span class="big">${s.bid}</span>`
+                : html`<span class="big quiet">${s.phase === 'over' ? '★' : '·'}</span>`}
+              <span class="sub">${s.phase === 'reveal' ? 'turned over'
+                : s.bid ? `${nameOf(s.bidder)}’s bid` : s.phase === 'ante' ? 'lay one down' : 'no bid yet'}</span>
+            </div>`}
       </div>
     </section>
-
-    <p class="prompt">${prompt()}</p>
 
     <section class="you">
       <div class="hand">
@@ -384,7 +441,10 @@ function Table () {
             }))}
       </div>
       ${G.losing ? html`<p class="losing">${C.penalty.losing(G.losing)}</p>` : null}
-      <div class="actions"><${Actions}/></div>
+      <div class=${'lip' + (myTurn() || canAnte() || canFlip() || s.pending?.by === G.me ? ' lit' : '')}>
+        <p class="prompt">${prompt()}</p>
+        <div class="actions"><${Actions}/></div>
+      </div>
     </section>
   </div>`
 }
